@@ -1,0 +1,123 @@
+<!doctype html><html lang="en"><head><title>Admin · MCSTUFF</title><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" href="/assets/favicon.ico" sizes="any"><link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png"><link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600&family=Pixelify+Sans:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css"></head><body>
+<header class="nav"></header>
+<main><div class="wrap">
+<div class="page-head"><h1>Admin panel</h1></div>
+<div class="tabs" role="tablist"><button data-t="packs" class="on">Resource Packs</button><button data-t="users">Users</button><button data-t="update">ZIP Update</button></div>
+
+<section id="t-packs">
+  <form class="panel bevel" id="addf">
+    <h2>Add a resource pack</h2><p class="sub">Upload the pack file, or paste an outside download link instead.</p>
+    <div class="row2"><div><label for="title">Title</label><input id="title" required maxlength="100"></div>
+    <div><label for="mcv">Minecraft version</label><input id="mcv" placeholder="1.21.x"></div></div>
+    <div class="row2"><div><label for="ver">Pack version</label><input id="ver" placeholder="1.0"></div>
+    <div><label for="link">Or download link</label><input id="link" type="url" placeholder="https://"></div></div>
+    <label for="desc">Description</label><textarea id="desc" maxlength="1500"></textarea>
+    <div class="row2"><div><label for="img">Cover image</label><input id="img" type="file" accept="image/*"></div>
+    <div><label for="file">Pack file (.zip)</label><input id="file" type="file"></div></div>
+    <div class="bar" id="bar"><i></i></div>
+    <div class="err" id="aerr" role="alert"></div>
+    <button class="btn" id="addb">Publish pack</button>
+  </form>
+  <div class="panel bevel"><h2>Published packs</h2><div class="list" id="plist"></div></div>
+</section>
+
+<section id="t-users" hidden><div class="panel bevel"><h2>Users</h2><p class="sub">The first account to register is the admin.</p><div class="list" id="ulist"></div></div></section>
+
+<section id="t-update" hidden>
+  <div class="panel bevel"><h2>ZIP Update</h2>
+    <p class="sub">Upload the new website ZIP. It is compared with the live files first, then applied with an automatic backup. The server restarts by itself and this page reloads when it is back. Your database and uploads are never touched.</p>
+    <input type="file" id="zipFile" accept=".zip"><div style="margin-top:.8rem"><button class="btn" id="chk">Check ZIP</button></div>
+    <div id="zipResult" style="margin-top:1rem"></div></div>
+  <div class="panel bevel"><h2>Rollback and backups</h2><div id="hist" class="sub">Loading...</div><div id="baks" class="sub"></div>
+    <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.6rem"><button class="btn sm" id="rbl">Rollback last backup</button><button class="btn ghost sm" id="clh">Clear history</button><button class="btn danger sm" id="clb">Delete all backups</button></div></div>
+  <div class="panel bevel"><h2>Download site code</h2><p class="sub">Current website code as a ZIP (no database, no uploads).</p><a class="btn ghost" href="/api/admin/updater/export">Download code ZIP</a></div>
+</section>
+</div></main>
+<footer><div class="wrap">MCSTUFF · Fan-made hub, not affiliated with Mojang or Microsoft.</div></footer><script src="/js/common.js"></script>
+<script>
+let token=null;
+document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('on',x===b));
+  ['packs','users','update'].forEach(t=>$('#t-'+t).hidden=t!==b.dataset.t);
+  if(b.dataset.t==='users')loadUsers();if(b.dataset.t==='update')loadInfo();
+});
+
+async function loadPacks(){
+  const rows=await api('/api/items?section=resource-packs');
+  $('#plist').innerHTML=rows.length?rows.map(i=>'<div class="li">'+(i.image?'<img src="'+esc(i.image)+'" alt="">':'')+'<div class="t">'+esc(i.title)+' <small>'+i.downloads+' downloads</small></div><button class="btn danger sm" data-del="'+i.id+'">Delete</button></div>').join(''):'<small>Nothing published yet.</small>';
+  document.querySelectorAll('[data-del]').forEach(b=>b.onclick=async()=>{
+    if(!confirm('Delete this pack and its files?'))return;
+    try{await api('/api/admin/items/'+b.dataset.del,{method:'DELETE'});toast('Deleted','ok');loadPacks();}catch(e){toast(e.message,'error');}
+  });
+}
+$('#addf').onsubmit=e=>{
+  e.preventDefault();
+  const fd=new FormData();
+  fd.append('title',$('#title').value);fd.append('mc_version',$('#mcv').value);fd.append('version',$('#ver').value);
+  fd.append('link',$('#link').value);fd.append('description',$('#desc').value);
+  if($('#img').files[0])fd.append('image',$('#img').files[0]);
+  if($('#file').files[0])fd.append('file',$('#file').files[0]);
+  const x=new XMLHttpRequest();x.open('POST','/api/admin/items');
+  const bar=$('#bar');bar.style.display='block';$('#addb').disabled=true;$('#aerr').textContent='';
+  x.upload.onprogress=ev=>{if(ev.lengthComputable)bar.firstElementChild.style.width=(ev.loaded/ev.total*100)+'%';};
+  x.onload=()=>{
+    bar.style.display='none';bar.firstElementChild.style.width='0';$('#addb').disabled=false;
+    let d={};try{d=JSON.parse(x.responseText)}catch{}
+    if(x.status>=200&&x.status<300){toast('Pack published','ok');$('#addf').reset();loadPacks();}else $('#aerr').textContent=d.error||'Upload failed';
+  };
+  x.onerror=()=>{bar.style.display='none';$('#addb').disabled=false;$('#aerr').textContent='Network error';};
+  x.send(fd);
+};
+
+async function loadUsers(){
+  const rows=await api('/api/admin/users');
+  $('#ulist').innerHTML=rows.map(u=>'<div class="li"><div class="t">'+esc(u.username)+' <small>'+esc(u.email)+'</small></div><small>'+(u.is_admin?'admin':'member')+'</small></div>').join('');
+}
+
+async function loadInfo(){
+  try{
+    const d=await api('/api/admin/updater/info');
+    $('#hist').innerHTML='Version '+esc(d.version)+(d.history&&d.history.length?'<ul style="padding-left:1.2rem;margin-top:.4rem">'+d.history.map(h=>'<li>'+esc(h.at)+' - '+esc(h.label)+(h.by?' by '+esc(h.by):'')+'</li>').join('')+'</ul>':' - no history yet');
+    $('#baks').innerHTML=d.backups&&d.backups.length?'Backups:<ul style="padding-left:1.2rem;margin-top:.4rem">'+d.backups.map(b=>'<li>'+esc(b.id)+' <button class="btn ghost sm" data-rb="'+esc(b.id)+'">Restore</button></li>').join('')+'</ul>':'No backups yet.';
+    document.querySelectorAll('[data-rb]').forEach(b=>b.onclick=()=>rollback(b.dataset.rb));
+  }catch(e){}
+}
+async function rollback(id){
+  if(!confirm('Restore '+(id||'the latest backup')+'? The server will restart.'))return;
+  const old=await getBootId();
+  try{
+    const d=await api('/api/admin/updater/rollback',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(id?{backupId:id}:{})});
+    if(d.restarting)waitForRestartAndReload(old,'Rollback applied. Server restarting... page will refresh automatically.');
+  }catch(e){toast(e.message,'error');}
+}
+$('#rbl').onclick=()=>rollback();
+$('#clh').onclick=async()=>{try{await api('/api/admin/updater/clear-history',{method:'POST'});loadInfo();}catch(e){toast(e.message,'error');}};
+$('#clb').onclick=async()=>{if(!confirm('Delete all backups?'))return;try{await api('/api/admin/updater/clear-backups',{method:'POST'});loadInfo();}catch(e){toast(e.message,'error');}};
+
+$('#chk').onclick=async()=>{
+  const f=$('#zipFile').files[0];if(!f){toast('Choose a ZIP first','error');return;}
+  const fd=new FormData();fd.append('zip',f);const box=$('#zipResult');box.textContent='Checking ZIP...';
+  try{
+    const d=await api('/api/admin/updater/check',{method:'POST',body:fd});token=d.token;
+    box.innerHTML='<p><b>Type:</b> '+esc(d.updateType)+' | <b>Added:</b> '+d.added+' | <b>Changed:</b> '+d.changed+' | <b>Same:</b> '+d.same+'</p>'+
+      (d.warnings&&d.warnings.length?'<p class="warn">'+d.warnings.map(esc).join('<br>')+'</p>':'')+
+      (d.changedFiles&&d.changedFiles.length?'<pre class="files">'+d.changedFiles.map(esc).join('\n')+(d.moreFiles?'\n... +'+d.moreFiles+' more':'')+'</pre>':'')+
+      '<button class="btn" id="app">Apply update</button>';
+    $('#app').onclick=apply;
+  }catch(e){box.innerHTML='<p class="err">'+esc(e.message)+'</p>';}
+};
+async function apply(){
+  if(!token||!confirm('Apply this update? A backup is created first and the server restarts.'))return;
+  const old=await getBootId();
+  try{
+    const d=await api('/api/admin/updater/apply',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token})});
+    token=null;$('#zipResult').textContent=d.message;
+    if(d.restarting)waitForRestartAndReload(old,'Update applied. Server restarting... page will refresh automatically.');
+  }catch(e){toast(e.message,'error');}
+}
+renderNav('admin').then(()=>loadPacks());
+</script></body></html>

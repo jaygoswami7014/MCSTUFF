@@ -1,0 +1,30 @@
+<!doctype html><html lang="en"><head><title>MCSTUFF</title><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" href="/assets/favicon.ico" sizes="any"><link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png"><link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600&family=Pixelify+Sans:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css"></head><body>
+<header class="nav"></header>
+<main>
+<section class="hero"><div class="wrap">
+  <div><h1>Every Minecraft file, one chest.</h1>
+  <p>Download resource packs today. Farm schematics, mods and shaders are getting their own slots next.</p>
+  <a class="btn" href="/resource-packs">Open Resource Packs</a></div>
+  <div class="art"><img src="/assets/logo.png" alt="MCSTUFF crowned creeper logo"></div>
+</div></section>
+<section><div class="wrap"><h2 class="section-title">Pick a slot</h2><div class="slots" id="slots"></div></div></section>
+</main>
+<footer><div class="wrap">MCSTUFF · Fan-made hub, not affiliated with Mojang or Microsoft.</div></footer><script src="/js/common.js"></script>
+<script>
+const ICONS={'resource-packs':'<svg class="ico" viewBox="0 0 8 8" shape-rendering="crispEdges"><path fill="#6b3fd4" d="M0 1h8v7H0z"/><path fill="#8b4dff" d="M0 0h8v2H0z"/><path fill="#d56bff" d="M1 3h2v2H1zM5 3h2v2H5zM3 5h2v2H3z"/></svg>',
+'farm-schematics':'<svg class="ico" viewBox="0 0 8 8" shape-rendering="crispEdges"><path fill="#3a2d63" d="M0 4h8v4H0z"/><path fill="#8b4dff" d="M1 1h2v3H1zM5 2h2v2H5z"/></svg>',
+'mods':'<svg class="ico" viewBox="0 0 8 8" shape-rendering="crispEdges"><path fill="#3a2d63" d="M1 1h6v6H1z"/><path fill="#8b4dff" d="M3 0h2v8H3zM0 3h8v2H0z"/></svg>',
+'shaders':'<svg class="ico" viewBox="0 0 8 8" shape-rendering="crispEdges"><path fill="#3a2d63" d="M0 0h8v8H0z"/><path fill="#d56bff" d="M2 1h4v1H2zM1 2h6v1H1z"/><path fill="#8b4dff" d="M0 5h8v3H0z"/></svg>'};
+(async()=>{
+  await renderNav('home');
+  const list=await api('/api/sections');
+  $('#slots').innerHTML=list.map(s=>{
+    const inner=ICONS[s.slug]+'<h3>'+esc(s.name)+'</h3><p>'+esc(s.blurb)+'</p><span class="tag">'+(s.live?(s.count+' file'+(s.count===1?'':'s')+' available'):'Coming soon')+'</span>';
+    return s.live?'<a class="slot bevel live" href="/'+s.slug+'">'+inner+'</a>':'<div class="slot bevel off" aria-disabled="true">'+inner+'</div>';
+  }).join('');
+})();
+</script></body></html>

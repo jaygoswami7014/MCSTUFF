@@ -1,0 +1,25 @@
+<!doctype html><html lang="en"><head><title>Resource Packs · MCSTUFF</title><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" href="/assets/favicon.ico" sizes="any"><link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png"><link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600&family=Pixelify+Sans:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css"></head><body>
+<header class="nav"></header>
+<main><div class="wrap">
+  <div class="page-head"><h1>Resource Packs</h1><p>Textures, GUIs and sound packs. Pick one, hit download, drop it in your resourcepacks folder.</p></div>
+  <div class="tools"><input id="q" type="search" placeholder="Search packs" aria-label="Search packs"></div>
+  <div class="grid" id="grid"></div>
+</div></main>
+<footer><div class="wrap">MCSTUFF · Fan-made hub, not affiliated with Mojang or Microsoft.</div></footer><script src="/js/common.js"></script>
+<script>
+let ALL=[];
+function draw(){
+  const q=$('#q').value.trim().toLowerCase();
+  const rows=ALL.filter(i=>!q||(i.title+' '+i.description+' '+i.mc_version).toLowerCase().includes(q));
+  $('#grid').innerHTML=rows.length?rows.map(i=>
+    '<article class="card bevel"><div class="shot">'+(i.image?'<img loading="lazy" src="'+esc(i.image)+'" alt="'+esc(i.title)+' preview">':'<span>NO PREVIEW</span>')+'</div><div class="body"><h3>'+esc(i.title)+'</h3>'+
+    '<div class="chips">'+(i.mc_version?'<span class="chip">MC '+esc(i.mc_version)+'</span>':'')+(i.version?'<span class="chip">v'+esc(i.version)+'</span>':'')+(i.size?'<span class="chip">'+fmtSize(i.size)+'</span>':'')+'</div>'+
+    '<p>'+esc(i.description)+'</p><div class="foot"><span>'+i.downloads+' downloads</span><a class="btn sm" href="/download/'+i.id+'">Download</a></div></div></article>'
+  ).join(''):'<div class="empty">'+(ALL.length?'No pack matches your search.':'No resource packs yet. Check back soon.')+'</div>';
+}
+(async()=>{await renderNav('rp');ALL=await api('/api/items?section=resource-packs');draw();$('#q').oninput=draw;})();
+</script></body></html>

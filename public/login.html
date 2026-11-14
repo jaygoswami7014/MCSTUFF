@@ -1,0 +1,40 @@
+<!doctype html><html lang="en"><head><title>Log in · MCSTUFF</title><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" href="/assets/favicon.ico" sizes="any"><link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png"><link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600&family=Pixelify+Sans:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css"></head><body>
+<header class="nav"></header>
+<main><form class="auth bevel" id="f">
+  <h1 id="ttl">Log in</h1><p class="note" id="note"></p>
+  <div id="rg" hidden><label for="username">Username</label><input id="username" autocomplete="username"><label for="email">Email</label><input id="email" type="email" autocomplete="email"></div>
+  <div id="lg"><label for="login">Username or email</label><input id="login" autocomplete="username"></div>
+  <label for="pw">Password</label><input id="pw" type="password" autocomplete="current-password">
+  <div class="err" id="err" role="alert"></div>
+  <button class="btn" id="go">Log in</button>
+  <div class="switch" id="sw"></div>
+</form></main>
+<footer><div class="wrap">MCSTUFF · Fan-made hub, not affiliated with Mojang or Microsoft.</div></footer><script src="/js/common.js"></script>
+<script>
+let mode='login',first=false;
+function setMode(m){
+  mode=m;$('#rg').hidden=m!=='register';$('#lg').hidden=m==='register';
+  $('#ttl').textContent=m==='register'?'Create account':'Log in';$('#go').textContent=m==='register'?'Register':'Log in';
+  $('#note').textContent=m==='register'&&first?'You are the first account, so you become the admin automatically.':'';
+  $('#sw').innerHTML=m==='register'?'Already registered? <button type="button" id="t">Log in</button>':'No account? <button type="button" id="t">Register</button>';
+  $('#t').onclick=()=>setMode(m==='register'?'login':'register');$('#err').textContent='';
+}
+(async()=>{
+  const st=await renderNav('');first=st.firstUser;
+  const next=new URLSearchParams(location.search).get('next');
+  if(st.user){location.href=(next&&next.startsWith('/')&&!next.startsWith('//'))?next:'/';return;}
+  setMode(first?'register':'login');
+  $('#f').onsubmit=async e=>{
+    e.preventDefault();$('#go').disabled=true;$('#err').textContent='';
+    try{
+      if(mode==='register')await api('/api/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:$('#username').value.trim(),email:$('#email').value.trim(),password:$('#pw').value})});
+      else await api('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({login:$('#login').value.trim(),password:$('#pw').value})});
+      location.href=(next&&next.startsWith('/')&&!next.startsWith('//'))?next:'/';
+    }catch(x){$('#err').textContent=x.message;$('#go').disabled=false;}
+  };
+})();
+</script></body></html>
